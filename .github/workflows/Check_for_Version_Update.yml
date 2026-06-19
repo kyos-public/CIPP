@@ -11,12 +11,12 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       - name: Check for Changed Files
-        uses: brettcannon/check-for-changed-files@v1.2.1
+        uses: brettcannon/check-for-changed-files@871d7b8b5917a4f6f06662e2262e8ffc51dff6d1 # v1.2.1
         with:
           file-pattern: public/version.json
           failure-message: "You have not updated version.json. This is a required file to update at each PR. Please sync your latest changes and update the version number."
       - name: Prevent changes to workflow files
-        uses: DovnarAlexander/github-action-file-detection@v0.3.0
+        uses: dovnaralexander/github-action-file-detection@81796ed94b320a267794166baf85347f7987b044 # v0.3.0
         with:
           wildcard: ".github/workflows/*.yml"
           exit_code_found: 1
