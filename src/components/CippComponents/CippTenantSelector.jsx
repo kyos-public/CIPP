@@ -85,12 +85,7 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
       {
         key: "SharePoint_Admin",
         label: "SharePoint Portal",
-        // The only portal whose host cannot be derived from the tenant - it has to be resolved
-        // through Graph. Use the URL the backend already resolved when it has one; otherwise fall
-        // back to the endpoint that resolves it and redirects.
-        link:
-          currentTenant?.addedFields?.sharepointAdminUrl ||
-          `/api/ListSharePointAdminUrl?tenantFilter=${currentTenant?.value}`,
+        link: `/api/ListSharePointAdminUrl?tenantFilter=${currentTenant?.value}`,
         icon: "Share",
         external: true,
       },
@@ -102,7 +97,7 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
       },
       {
         key: "Compliance_Portal",
-        label: "Purview Portal",
+        label: "Compliance Portal",
         link: `https://purview.microsoft.com/?tid=${currentTenant?.addedFields?.customerId}`,
         icon: "ShieldMoon",
       },
@@ -232,7 +227,6 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
               displayName: matchingTenant.displayName,
               customerId: matchingTenant.customerId,
               initialDomainName: matchingTenant.initialDomainName,
-              sharepointAdminUrl: matchingTenant.SharepointAdminUrl,
             },
           });
         }
@@ -293,7 +287,6 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
                 displayName: matchingTenant.displayName,
                 customerId: matchingTenant.customerId,
                 initialDomainName: matchingTenant.initialDomainName,
-                sharepointAdminUrl: matchingTenant.SharepointAdminUrl,
               },
             }
           : {
@@ -358,25 +351,16 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
           onChange={(nv) => setSelectedTenant(nv)}
           options={
             tenantList.isSuccess && tenantList.data && tenantList.data.length > 0
-              ? tenantList.data.map(
-                  ({
-                    customerId,
-                    displayName,
-                    defaultDomainName,
-                    initialDomainName,
-                    SharepointAdminUrl,
-                  }) => ({
-                    value: defaultDomainName,
-                    label: `${displayName} (${defaultDomainName})`,
-                    addedFields: {
-                      defaultDomainName: defaultDomainName,
-                      displayName: displayName,
-                      customerId: customerId,
-                      initialDomainName: initialDomainName,
-                      sharepointAdminUrl: SharepointAdminUrl,
-                    },
-                  })
-                )
+              ? tenantList.data.map(({ customerId, displayName, defaultDomainName, initialDomainName }) => ({
+                  value: defaultDomainName,
+                  label: `${displayName} (${defaultDomainName})`,
+                  addedFields: {
+                    defaultDomainName: defaultDomainName,
+                    displayName: displayName,
+                    customerId: customerId,
+                    initialDomainName: initialDomainName,
+                  },
+                }))
               : []
           }
           getOptionLabel={(option) => option?.label || ""}

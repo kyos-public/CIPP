@@ -36,7 +36,6 @@ const Page = () => {
           creatable: false,
           api: {
             url: "/api/ListGraphRequest",
-            queryKey: "TeamsVoiceAssignableUsers",
             dataKey: "Results",
             data: {
               Endpoint: "users",
@@ -81,16 +80,7 @@ const Page = () => {
           label: "Emergency Location",
           api: {
             url: "/api/ListTeamsLisLocation",
-            queryKey: "TeamsLisLocations",
-            // Description is optional on a location, so fall back to the place name and
-            // then the street address rather than rendering "No label found".
-            labelField: (location) =>
-              location.Description ||
-              location.Location ||
-              [location.HouseNumber, location.StreetName, location.City]
-                .filter(Boolean)
-                .join(" ") ||
-              location.LocationId,
+            labelField: "Description",
             valueField: "LocationId",
           },
         },
@@ -105,7 +95,6 @@ const Page = () => {
       "AcquiredCapabilities",
       "AssignmentStatus",
       "AssignedTo",
-      "EmergencyLocation",
     ],
     actions: actions,
   };
@@ -120,11 +109,10 @@ const Page = () => {
         offCanvas={offCanvas}
         simpleColumns={[
           ...reportDB.cacheColumns,
-          "AssignedTo.userPrincipalName",
+          "AssignedTo",
           "TelephoneNumber",
           "AssignmentStatus",
           "NumberType",
-          "EmergencyLocation",
           "AcquiredCapabilities",
           "IsoCountryCode",
           "PlaceName",

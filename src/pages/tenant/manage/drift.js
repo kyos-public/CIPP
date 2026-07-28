@@ -14,7 +14,6 @@ import {
   FactCheck,
   Search,
   Edit,
-  CompareArrows,
 } from '@mui/icons-material'
 import {
   Box,
@@ -45,7 +44,6 @@ import { createDriftManagementActions } from './driftManagementActions'
 import { ExecutiveReportButton } from '../../../components/ExecutiveReportButton'
 import { CippAutoComplete } from '../../../components/CippComponents/CippAutocomplete'
 import CippFormComponent from '../../../components/CippComponents/CippFormComponent'
-import { CippPolicyCompareDialog } from '../../../components/CippComponents/CippPolicyCompareDialog'
 
 const ManageDriftPage = () => {
   const router = useRouter()
@@ -62,7 +60,6 @@ const ManageDriftPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [selectedItems, setSelectedItems] = useState([])
-  const [compareTarget, setCompareTarget] = useState(null)
 
   const filterForm = useForm({
     defaultValues: {
@@ -154,9 +151,9 @@ const ManageDriftPage = () => {
     const settingName = getDriftTaskSettingName(standardName)
     if (!settingName || !tenantFilter) return false
 
-    const expectedPrefix =
+    const expectedTaskName =
       `Persistent Drift Remediation: ${settingName} - ${tenantFilter}`.toLowerCase()
-    return [...persistentTaskNameSet].some((name) => name.startsWith(expectedPrefix))
+    return persistentTaskNameSet.has(expectedTaskName)
   }
 
   // Process drift data for chart - filter by current tenant and aggregate
@@ -188,11 +185,6 @@ const ManageDriftPage = () => {
       }
       if (item.deniedDeviations && Array.isArray(item.deniedDeviations)) {
         acc.deniedDeviationsList.push(...item.deniedDeviations.filter((dev) => dev !== null))
-      }
-      if (item.licenseMissingDeviations && Array.isArray(item.licenseMissingDeviations)) {
-        acc.licenseMissingDeviationsList.push(
-          ...item.licenseMissingDeviations.filter((dev) => dev !== null)
-        )
       }
 
       // Extract compliant standards from ComparisonDetails in driftSettings
@@ -258,27 +250,6 @@ const ManageDriftPage = () => {
               if (!displayName) {
                 return null
               }
-            } else if (standardName.startsWith('ReusableSettingsTemplate.')) {
-              // TemplateList is multi-select for this standard, so each entry holds an array
-              const guid = standardName.substring('ReusableSettingsTemplate.'.length)
-              const rsTemplates = item.driftSettings?.standardSettings?.ReusableSettingsTemplate
-              if (Array.isArray(rsTemplates)) {
-                for (const template of rsTemplates) {
-                  const templateList = Array.isArray(template.TemplateList)
-                    ? template.TemplateList
-                    : [template.TemplateList].filter(Boolean)
-                  const match = templateList.find((entry) => entry?.value === guid)
-                  if (match?.label) {
-                    displayName = match.label
-                    break
-                  }
-                }
-              }
-
-              // If template not found, return null to filter it out later
-              if (!displayName) {
-                return null
-              }
             } else if (standardName.startsWith('QuarantineTemplate.')) {
               // The sub-key suffix is hex-encoded — decode it to get the readable display name
               const hexSuffix = standardName.substring('QuarantineTemplate.'.length)
@@ -330,7 +301,6 @@ const ManageDriftPage = () => {
       acceptedDeviations: [],
       customerSpecificDeviationsList: [],
       deniedDeviationsList: [],
-      licenseMissingDeviationsList: [],
       alignedStandards: [],
       latestDataCollection: null,
     }
@@ -1164,16 +1134,9 @@ const ManageDriftPage = () => {
     'denied'
   )
   const alignedStandardItems = createDeviationItems(processedDriftData.alignedStandards, 'aligned')
-  const licenseMissingDeviationItems = createDeviationItems(
-    processedDriftData.licenseMissingDeviationsList,
-    'skipped'
-  )
 
   // Separate items by their actual status
-  const licenseSkippedItems = [
-    ...licenseMissingDeviationItems,
-    ...deviationItems.filter((item) => item.isLicenseSkipped),
-  ]
+  const licenseSkippedItems = deviationItems.filter((item) => item.isLicenseSkipped)
   const compliantFromDeviations = deviationItems.filter((item) => item.isActuallyCompliant)
   const actualDeviationItems = deviationItems.filter(
     (item) => !item.isLicenseSkipped && !item.isActuallyCompliant
@@ -1181,26 +1144,6 @@ const ManageDriftPage = () => {
 
   // Combine compliant items from both sources
   const allAlignedItems = [...alignedStandardItems, ...compliantFromDeviations]
-
-  // Tenant-only policies (exist in the tenant but not in the template) can be deleted but not
-  // remediated; policies that are backed by the template can be remediated but not deleted.
-  const TENANT_ONLY_EXPECTED_VALUE = 'This policy only exists in the tenant, not in the template.'
-
-  const isTenantOnlyPolicy = (item) => {
-    const expectedValue =
-      item?.expectedValue ??
-      item?.ExpectedValue ??
-      item?.originalDeviation?.expectedValue ??
-      item?.originalDeviation?.ExpectedValue
-    return expectedValue === TENANT_ONLY_EXPECTED_VALUE
-  }
-
-  const supportsDeleteAction = (item) =>
-    (item?.standardName?.includes('ConditionalAccessTemplate') ||
-      item?.standardName?.includes('IntuneTemplate')) &&
-    isTenantOnlyPolicy(item)
-
-  const supportsRemediateAction = (item) => !isTenantOnlyPolicy(item)
 
   const handleMenuClick = (event, itemId) => {
     setAnchorEl((prev) => ({ ...prev, [itemId]: event.currentTarget }))
@@ -1359,9 +1302,16 @@ const ManageDriftPage = () => {
 
     // Map selected item IDs back to their deviation data
     // IDs are in format: "current-1", "accepted-2", etc.
+    const allDeviations = [
+      ...deviationItemsWithActions,
+      ...acceptedDeviationItemsWithActions,
+      ...customerSpecificDeviationItemsWithActions,
+      ...deniedDeviationItemsWithActions,
+    ]
+
     const selectedDeviations = selectedItems
       .map((itemId) => {
-        const item = allActionableItems.find((d) => d.id === itemId)
+        const item = allDeviations.find((d) => d.id === itemId)
         return item ? item.originalDeviation : null
       })
       .filter(Boolean)
@@ -1469,98 +1419,102 @@ const ManageDriftPage = () => {
     setSelectedItems([])
   }, [tenantFilter])
 
-  // Only Intune template standards can be compared live against their baseline. The standard
-  // records compliance as a boolean and discards the diff, so it has to be recomputed on demand.
-  // Note the singular prefix: "IntuneTemplates.<policyId>" is a tenant-only policy, which has no
-  // baseline in the template and so nothing to compare against.
-  const getCompareTemplateGuid = (item) => {
-    const name = item?.standardName
-    if (!name) return null
-    const withoutPrefix = name.startsWith('standards.') ? name.substring('standards.'.length) : name
-    return withoutPrefix.startsWith('IntuneTemplate.')
-      ? withoutPrefix.substring('IntuneTemplate.'.length)
-      : null
-  }
-
-  const buildCardActions = (item, menuKey) => {
-    const templateGuid = getCompareTemplateGuid(item)
-    return (
-      <Stack direction="row" spacing={1}>
-        {templateGuid && (
-          <Button
-            variant="outlined"
-            startIcon={<CompareArrows />}
-            onClick={(e) => {
-              e.stopPropagation()
-              setCompareTarget({ templateGuid, templateName: item.text })
-            }}
-            size="small"
-          >
-            Compare
-          </Button>
-        )}
+  // Add action buttons to each deviation item
+  const deviationItemsWithActions = actualDeviationItems.map((item) => {
+    return {
+      ...item,
+      cardLabelBoxActions: (
         <Button
           variant="outlined"
           endIcon={<ExpandMore />}
           onClick={(e) => {
             e.stopPropagation()
-            handleMenuClick(e, menuKey)
+            handleMenuClick(e, item.id)
           }}
           size="small"
         >
           Actions
         </Button>
-      </Stack>
-    )
-  }
-
-  // Add action buttons to each deviation item
-  const deviationItemsWithActions = actualDeviationItems.map((item) => ({
-    ...item,
-    cardLabelBoxActions: buildCardActions(item, item.id),
-  }))
+      ),
+    }
+  })
 
   // Add action buttons to accepted deviation items
-  const acceptedDeviationItemsWithActions = acceptedDeviationItems.map((item) => ({
-    ...item,
-    cardLabelBoxActions: buildCardActions(item, `accepted-${item.id}`),
-  }))
+  const acceptedDeviationItemsWithActions = acceptedDeviationItems.map((item) => {
+    return {
+      ...item,
+      cardLabelBoxActions: (
+        <Button
+          variant="outlined"
+          endIcon={<ExpandMore />}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleMenuClick(e, `accepted-${item.id}`)
+          }}
+          size="small"
+        >
+          Actions
+        </Button>
+      ),
+    }
+  })
 
   // Add action buttons to customer specific deviation items
-  const customerSpecificDeviationItemsWithActions = customerSpecificDeviationItems.map((item) => ({
-    ...item,
-    cardLabelBoxActions: buildCardActions(item, `customer-${item.id}`),
-  }))
+  const customerSpecificDeviationItemsWithActions = customerSpecificDeviationItems.map((item) => {
+    return {
+      ...item,
+      cardLabelBoxActions: (
+        <Button
+          variant="outlined"
+          endIcon={<ExpandMore />}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleMenuClick(e, `customer-${item.id}`)
+          }}
+          size="small"
+        >
+          Actions
+        </Button>
+      ),
+    }
+  })
 
   // Add action buttons to denied deviation items
   const deniedDeviationItemsWithActions = deniedDeviationItems.map((item) => ({
     ...item,
-    cardLabelBoxActions: buildCardActions(item, `denied-${item.id}`),
+    cardLabelBoxActions: (
+      <Button
+        variant="outlined"
+        endIcon={<ExpandMore />}
+        onClick={(e) => {
+          e.stopPropagation()
+          handleMenuClick(e, `denied-${item.id}`)
+        }}
+        size="small"
+      >
+        Actions
+      </Button>
+    ),
   }))
 
   // Add action buttons to compliant/aligned items so previously denied and now compliant entries
   // can be denied again or denied with remediation persistence.
   const alignedItemsWithActions = allAlignedItems.map((item) => ({
     ...item,
-    cardLabelBoxActions: buildCardActions(item, `aligned-${item.id}`),
+    cardLabelBoxActions: (
+      <Button
+        variant="outlined"
+        endIcon={<ExpandMore />}
+        onClick={(e) => {
+          e.stopPropagation()
+          handleMenuClick(e, `aligned-${item.id}`)
+        }}
+        size="small"
+      >
+        Actions
+      </Button>
+    ),
   }))
-
-  // Combined list used to resolve selected item IDs back to their deviation data
-  const allActionableItems = [
-    ...deviationItemsWithActions,
-    ...acceptedDeviationItemsWithActions,
-    ...customerSpecificDeviationItemsWithActions,
-    ...deniedDeviationItemsWithActions,
-  ]
-
-  // Bulk actions are only offered when they apply to every selected deviation
-  const selectedActionableItems = selectedItems
-    .map((itemId) => allActionableItems.find((d) => d.id === itemId))
-    .filter(Boolean)
-  const selectedSupportDelete =
-    selectedActionableItems.length > 0 && selectedActionableItems.every(supportsDeleteAction)
-  const selectedSupportRemediate =
-    selectedActionableItems.length > 0 && selectedActionableItems.every(supportsRemediateAction)
 
   // Calculate compliance metrics for badges
   // Accepted and Customer Specific deviations count as compliant since they are user-approved
@@ -1592,7 +1546,6 @@ const ManageDriftPage = () => {
   const getCategory = (standardName) => {
     if (!standardName) return 'Other Standards'
     if (standardName.includes('ConditionalAccessTemplate')) return 'Conditional Access Policies'
-    if (standardName.includes('ReusableSettingsTemplate')) return 'Intune Policies'
     if (standardName.includes('IntuneTemplate')) return 'Intune Policies'
     if (standardName.includes('QuarantineTemplate')) return 'Defender Standards'
 
@@ -2001,21 +1954,24 @@ const ManageDriftPage = () => {
                               <Check sx={{ mr: 1, color: 'info.main' }} />
                               Accept Selected Deviations
                             </MenuItem>
-                            {/* Delete only applies to Intune/CA policies that exist in the tenant
-                                but not in the template, so require every selected item to qualify */}
-                            {selectedSupportDelete && (
+                            {/* Only show delete option if there are template deviations that support deletion */}
+                            {processedDriftData.currentDeviations.some(
+                              (deviation) =>
+                                (deviation.standardName?.includes('ConditionalAccessTemplate') ||
+                                  deviation.standardName?.includes('IntuneTemplate') ||
+                                  deviation.standardName?.includes('QuarantineTemplate')) &&
+                                deviation.expectedValue ===
+                                  'This policy only exists in the tenant, not in the template.'
+                            ) && (
                               <MenuItem onClick={() => handleBulkAction('deny-all-delete')}>
                                 <Block sx={{ mr: 1, color: 'error.main' }} />
                                 Deny Selected Deviations - Delete
                               </MenuItem>
                             )}
-                            {/* Remediate only applies to policies that are in the template */}
-                            {selectedSupportRemediate && (
-                              <MenuItem onClick={() => handleBulkAction('deny-all-remediate')}>
-                                <Cancel sx={{ mr: 1, color: 'error.main' }} />
-                                Deny Selected Deviations - Remediate to align with template
-                              </MenuItem>
-                            )}
+                            <MenuItem onClick={() => handleBulkAction('deny-all-remediate')}>
+                              <Cancel sx={{ mr: 1, color: 'error.main' }} />
+                              Deny Selected Deviations - Remediate to align with template
+                            </MenuItem>
                             <MenuItem onClick={handleRemoveDriftCustomization}>
                               <Block sx={{ mr: 1, color: 'warning.main' }} />
                               Remove Drift Customization
@@ -2147,17 +2103,13 @@ const ManageDriftPage = () => {
         />
       )}
 
-      <CippPolicyCompareDialog
-        open={Boolean(compareTarget)}
-        onClose={() => setCompareTarget(null)}
-        tenantFilter={tenantFilter}
-        templateGuid={compareTarget?.templateGuid}
-        templateName={compareTarget?.templateName}
-        standardsTemplateId={templateId}
-      />
-
       {/* Render all Menu components outside of card structure */}
       {deviationItemsWithActions.map((item) => {
+        const supportsDelete =
+          (item.standardName?.includes('ConditionalAccessTemplate') ||
+            item.standardName?.includes('IntuneTemplate') ||
+            item.standardName?.includes('QuarantineTemplate')) &&
+          item.expectedValue === 'This policy only exists in the tenant, not in the template.'
         return (
           <Menu
             key={`menu-${item.id}`}
@@ -2183,7 +2135,7 @@ const ManageDriftPage = () => {
               <Check sx={{ mr: 1, color: 'info.main' }} />
               Accept Deviation
             </MenuItem>
-            {supportsDeleteAction(item) && (
+            {supportsDelete && (
               <MenuItem
                 onClick={() => {
                   handleDeviationAction('deny-delete', item)
@@ -2194,22 +2146,25 @@ const ManageDriftPage = () => {
                 Deny Deviation - Delete Policy
               </MenuItem>
             )}
-            {supportsRemediateAction(item) && (
-              <MenuItem
-                onClick={() => {
-                  handleDeviationAction('deny-remediate', item)
-                  handleMenuClose(item.id)
-                }}
-              >
-                <Cancel sx={{ mr: 1, color: 'error.main' }} />
-                Deny Deviation - Remediate to align with template
-              </MenuItem>
-            )}
+            <MenuItem
+              onClick={() => {
+                handleDeviationAction('deny-remediate', item)
+                handleMenuClose(item.id)
+              }}
+            >
+              <Cancel sx={{ mr: 1, color: 'error.main' }} />
+              Deny Deviation - Remediate to align with template
+            </MenuItem>
           </Menu>
         )
       })}
 
       {acceptedDeviationItemsWithActions.map((item) => {
+        const supportsDelete =
+          (item.standardName?.includes('ConditionalAccessTemplate') ||
+            item.standardName?.includes('IntuneTemplate') ||
+            item.standardName?.includes('QuarantineTemplate')) &&
+          item.expectedValue === 'This policy only exists in the tenant, not in the template.'
         return (
           <Menu
             key={`menu-accepted-${item.id}`}
@@ -2217,7 +2172,7 @@ const ManageDriftPage = () => {
             open={Boolean(anchorEl[`accepted-${item.id}`])}
             onClose={() => handleMenuClose(`accepted-${item.id}`)}
           >
-            {supportsDeleteAction(item) && (
+            {supportsDelete && (
               <MenuItem
                 onClick={() => {
                   handleDeviationAction('deny-delete', item)
@@ -2228,17 +2183,15 @@ const ManageDriftPage = () => {
                 Deny - Delete Policy
               </MenuItem>
             )}
-            {supportsRemediateAction(item) && (
-              <MenuItem
-                onClick={() => {
-                  handleDeviationAction('deny-remediate', item)
-                  handleMenuClose(`accepted-${item.id}`)
-                }}
-              >
-                <Cancel sx={{ mr: 1, color: 'error.main' }} />
-                Deny - Remediate to align with template
-              </MenuItem>
-            )}
+            <MenuItem
+              onClick={() => {
+                handleDeviationAction('deny-remediate', item)
+                handleMenuClose(`accepted-${item.id}`)
+              }}
+            >
+              <Cancel sx={{ mr: 1, color: 'error.main' }} />
+              Deny - Remediate to align with template
+            </MenuItem>
             <MenuItem
               onClick={() => {
                 handleDeviationAction('accept-customer-specific', item)
@@ -2253,6 +2206,11 @@ const ManageDriftPage = () => {
       })}
 
       {customerSpecificDeviationItemsWithActions.map((item) => {
+        const supportsDelete =
+          (item.standardName?.includes('ConditionalAccessTemplate') ||
+            item.standardName?.includes('IntuneTemplate') ||
+            item.standardName?.includes('QuarantineTemplate')) &&
+          item.expectedValue === 'This policy only exists in the tenant, not in the template.'
         return (
           <Menu
             key={`menu-customer-${item.id}`}
@@ -2260,7 +2218,7 @@ const ManageDriftPage = () => {
             open={Boolean(anchorEl[`customer-${item.id}`])}
             onClose={() => handleMenuClose(`customer-${item.id}`)}
           >
-            {supportsDeleteAction(item) && (
+            {supportsDelete && (
               <MenuItem
                 onClick={() => {
                   handleDeviationAction('deny-delete', item)
@@ -2271,17 +2229,15 @@ const ManageDriftPage = () => {
                 Deny - Delete
               </MenuItem>
             )}
-            {supportsRemediateAction(item) && (
-              <MenuItem
-                onClick={() => {
-                  handleDeviationAction('deny-remediate', item)
-                  handleMenuClose(`customer-${item.id}`)
-                }}
-              >
-                <Cancel sx={{ mr: 1, color: 'error.main' }} />
-                Deny - Remediate to align with template
-              </MenuItem>
-            )}
+            <MenuItem
+              onClick={() => {
+                handleDeviationAction('deny-remediate', item)
+                handleMenuClose(`customer-${item.id}`)
+              }}
+            >
+              <Cancel sx={{ mr: 1, color: 'error.main' }} />
+              Deny - Remediate to align with template
+            </MenuItem>
             <MenuItem
               onClick={() => {
                 handleDeviationAction('accept', item)
@@ -2311,17 +2267,15 @@ const ManageDriftPage = () => {
             <Error sx={{ mr: 1, color: 'error.main' }} />
             Rerun standard to align with template
           </MenuItem>
-          {supportsRemediateAction(item) && (
-            <MenuItem
-              onClick={() => {
-                handleDeviationAction('deny-remediate', item)
-                handleMenuClose(`denied-${item.id}`)
-              }}
-            >
-              <Cancel sx={{ mr: 1, color: 'error.main' }} />
-              Deny - Remediate to align with template
-            </MenuItem>
-          )}
+          <MenuItem
+            onClick={() => {
+              handleDeviationAction('deny-remediate', item)
+              handleMenuClose(`denied-${item.id}`)
+            }}
+          >
+            <Cancel sx={{ mr: 1, color: 'error.main' }} />
+            Deny - Remediate to align with template
+          </MenuItem>
           <MenuItem
             onClick={() => {
               handleDeviationAction('accept', item)
@@ -2359,17 +2313,15 @@ const ManageDriftPage = () => {
             <Error sx={{ mr: 1, color: 'error.main' }} />
             Rerun standard to align with template
           </MenuItem>
-          {supportsRemediateAction(item) && (
-            <MenuItem
-              onClick={() => {
-                handleDeviationAction('deny-remediate', item)
-                handleMenuClose(`aligned-${item.id}`)
-              }}
-            >
-              <Cancel sx={{ mr: 1, color: 'error.main' }} />
-              Deny - Remediate to align with template
-            </MenuItem>
-          )}
+          <MenuItem
+            onClick={() => {
+              handleDeviationAction('deny-remediate', item)
+              handleMenuClose(`aligned-${item.id}`)
+            }}
+          >
+            <Cancel sx={{ mr: 1, color: 'error.main' }} />
+            Deny - Remediate to align with template
+          </MenuItem>
         </Menu>
       ))}
 

@@ -8,10 +8,6 @@ import { Box, Container, Stack } from '@mui/system'
 import { CippHead } from '../../../../components/CippComponents/CippHead.jsx'
 import { CippDataTable } from '../../../../components/CippTable/CippDataTable.js'
 import CippFormComponent from '../../../../components/CippComponents/CippFormComponent'
-import {
-  CippAnonymizedReportAlert,
-  isReportAnonymized,
-} from '../../../../components/CippComponents/CippAnonymizedReportAlert'
 
 // Convert camelCase report names like "getMailboxUsageDetail" → "Mailbox Usage Detail"
 // Uses the same acronym-aware splitting as getCippTranslation
@@ -150,14 +146,6 @@ const Page = () => {
             )}
             {currentTenant && !report && (
               <Alert severity="info">Select a report above to load data.</Alert>
-            )}
-            {currentTenant && report && (
-              <CippAnonymizedReportAlert
-                show={
-                  !reportDataApi.isFetching &&
-                  isReportAnonymized(Array.isArray(reportDataApi.data) ? reportDataApi.data : [])
-                }
-              />
             )}
             {currentTenant && report && (
               <Card>

@@ -58,7 +58,6 @@
     "name": "SharePoint_Admin",
     "url": "/api/ListSharePointAdminUrl?tenantFilter=defaultDomainName",
     "variable": "defaultDomainName",
-    "field": "SharepointAdminUrl",
     "target": "_blank",
     "external": true,
     "icon": "Share"
@@ -73,7 +72,7 @@
     "icon": "Shield"
   },
   {
-    "label": "Purview",
+    "label": "Compliance",
     "name": "Compliance_Portal",
     "url": "https://purview.microsoft.com/?tid=customerId",
     "variable": "customerId",
