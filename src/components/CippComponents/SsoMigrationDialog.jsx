@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
 import {
   Alert,
   Button,
@@ -15,11 +14,8 @@ import {
 import { ApiPostCall } from '../../api/ApiCall'
 
 const DISMISS_KEY = 'cipp_sso_migration_dismissed'
-const ERROR_DISMISS_KEY = 'cipp_sso_migration_error_dismissed'
-const SSO_SETTINGS_PATH = '/cipp/advanced/super-admin/sso'
 
 export const SsoMigrationDialog = ({ meData }) => {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [multiTenant, setMultiTenant] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -31,21 +27,16 @@ export const SsoMigrationDialog = ({ meData }) => {
   const permissions = meData?.permissions || []
   const ssoMigration = meData?.ssoMigration
   const hasPermission = permissions.includes('CIPP.AppSettings.ReadWrite')
-  const status = ssoMigration?.status
-  const isErrorState = status === 'error'
 
   useEffect(() => {
     if (!meData || !ssoMigration) return
-    if (status !== 'none' && status !== 'error') return
+    if (ssoMigration.status !== 'none') return
 
-    // Dismissals are tracked per state so hiding the "get ready" nag doesn't also
-    // hide a migration that later fails.
-    const dismissKey = status === 'error' ? ERROR_DISMISS_KEY : DISMISS_KEY
-    const dismissedAt = localStorage.getItem(dismissKey)
+    const dismissedAt = localStorage.getItem(DISMISS_KEY)
     if (dismissedAt && Date.now() - Number(dismissedAt) < 24 * 60 * 60 * 1000) return
 
     setOpen(true)
-  }, [meData, ssoMigration, status])
+  }, [meData, ssoMigration])
 
   const handleApprove = useCallback(() => {
     setSubmitted(true)
@@ -59,55 +50,13 @@ export const SsoMigrationDialog = ({ meData }) => {
   }, [multiTenant, ssoSetup])
 
   const handleDismiss = useCallback(() => {
-    localStorage.setItem(isErrorState ? ERROR_DISMISS_KEY : DISMISS_KEY, String(Date.now()))
+    localStorage.setItem(DISMISS_KEY, String(Date.now()))
     setOpen(false)
-  }, [isErrorState])
-
-  const handleGoToSsoSettings = useCallback(() => {
-    setOpen(false)
-    router.push(SSO_SETTINGS_PATH)
-  }, [router])
+  }, [])
 
   const handleClose = useCallback(() => {
     setOpen(false)
   }, [])
-
-  // A failed migration can't be retried from here — the SSO settings page surfaces the
-  // underlying error and the Repair action that resumes from where setup stopped.
-  if (isErrorState) {
-    return (
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>CIPP Single Sign-On Setup Incomplete</DialogTitle>
-        <DialogContent>
-          <Alert severity="error" sx={{ mb: 2 }}>
-            The CIPP-SSO app registration could not be set up automatically, so the migration is
-            incomplete.
-          </Alert>
-          <Typography sx={{ mb: 2 }}>
-            The SSO settings page shows the specific error and lets you finish setup manually. In
-            most cases <strong>Repair</strong> picks up from where it stopped, so the existing app
-            registration is reused rather than recreated.
-          </Typography>
-          {!hasPermission && (
-            <Alert severity="info">
-              Only users with App Settings permissions can complete the SSO setup. Please ask an
-              administrator to finish this step.
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDismiss} color="inherit">
-            Remind Me Later
-          </Button>
-          {hasPermission && (
-            <Button onClick={handleGoToSsoSettings} variant="contained" color="primary">
-              Go to SSO Settings
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-    )
-  }
 
   const result = ssoSetup.data?.data?.Results ?? ssoSetup.data?.Results
   const isSuccess = result?.severity === 'success'

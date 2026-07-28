@@ -88,9 +88,6 @@ export const markdownStyles = {
     fontWeight: "bold",
   },
   "& table": {
-    display: "block",
-    overflowX: "auto",
-    maxWidth: "100%",
     width: "100%",
     borderCollapse: "collapse",
     marginTop: 2,

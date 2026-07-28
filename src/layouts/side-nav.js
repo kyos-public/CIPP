@@ -135,28 +135,15 @@ export const SideNav = (props) => {
 
     let targetScrollTop = el.scrollTop
     let animating = false
-    let lastWrite = null
 
     const animate = () => {
-      if (!animating) {
-        return
-      }
       const diff = targetScrollTop - el.scrollTop
-
-      // browsers can round to device pixels
-      if (Math.abs(diff) < 1) {
+      if (Math.abs(diff) < 0.5) {
+        el.scrollTop = targetScrollTop
         animating = false
         return
       }
-      const before = el.scrollTop
-      lastWrite = before + diff * 0.25
-      el.scrollTop = lastWrite
-      if (el.scrollTop === before) {
-        // write clamped or rounded to a no-op, stop instead of spinning the raf loop
-        targetScrollTop = before
-        animating = false
-        return
-      }
+      el.scrollTop += diff * 0.25
       requestAnimationFrame(animate)
     }
 
@@ -170,25 +157,8 @@ export const SideNav = (props) => {
       }
     }
 
-    // scrollbar drags, keyboard and touch move scrollTop outside the wheel path,
-    // resync the target so the easing loop doesn't fight them for the thumb.
-    // mid-animation, events matching our own write are the loop's echo, skip those
-    const handleScroll = () => {
-      if (animating && lastWrite !== null && Math.abs(el.scrollTop - lastWrite) < 1) {
-        return
-      }
-      targetScrollTop = el.scrollTop
-      animating = false
-    }
-
     el.addEventListener('wheel', handleWheel, { passive: false })
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    return () => {
-      // queued animate() exits on guard, stopping RAF chain
-      animating = false
-      el.removeEventListener('wheel', handleWheel)
-      el.removeEventListener('scroll', handleScroll)
-    }
+    return () => el.removeEventListener('wheel', handleWheel)
   }, [])
 
   // Preprocess items to mark which should be open

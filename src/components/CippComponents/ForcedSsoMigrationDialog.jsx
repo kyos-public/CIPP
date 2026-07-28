@@ -14,7 +14,7 @@ import {
 } from '@mui/material'
 import { ApiGetCall, ApiPostCall } from '../../api/ApiCall'
 
-export const ForcedSsoMigrationDialog = ({ setupCompleted = true }) => {
+export const ForcedSsoMigrationDialog = () => {
   const [multiTenant, setMultiTenant] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
@@ -31,14 +31,7 @@ export const ForcedSsoMigrationDialog = ({ setupCompleted = true }) => {
   const forceSsoMigration = currentRole.data?.forceSsoMigration
   const hasPermission = permissions.includes('CIPP.AppSettings.ReadWrite')
 
-  // Hold the forced migration behind initial setup — the setup wizard must be
-  // reachable (and the SAM app configured) before SSO migration can succeed.
-  const open = !!(
-    currentRole.isSuccess &&
-    hasPermission &&
-    forceSsoMigration?.status === 'pending' &&
-    setupCompleted
-  )
+  const open = !!(currentRole.isSuccess && hasPermission && forceSsoMigration?.status === 'pending')
 
   const result = ssoSetup.data?.data?.Results ?? ssoSetup.data?.Results
   const isSuccess = result?.severity === 'success'

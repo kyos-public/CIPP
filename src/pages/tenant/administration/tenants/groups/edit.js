@@ -55,11 +55,6 @@ const Page = () => {
                 variableName: rule.value.variableName,
                 value: rule.value.value,
               };
-            } else if (rule.property === "gdapRelationshipAge") {
-              // Number input bound to value.value - no label/option wrapping
-              valueForForm = {
-                value: rule.value?.value ?? rule.value,
-              };
             } else if (Array.isArray(rule.value)) {
               // If it's an array of objects, extract all values
               valueForForm = rule.value.map((item) => ({
@@ -97,8 +92,6 @@ const Page = () => {
                     ? "Member of Tenant Group"
                     : rule.property === "customVariable"
                     ? "Custom Variable"
-                    : rule.property === "gdapRelationshipAge"
-                    ? "GDAP Relationship Age (days)"
                     : rule.property,
                 value: rule.property,
                 type:
@@ -112,8 +105,6 @@ const Page = () => {
                     ? "tenantGroup"
                     : rule.property === "customVariable"
                     ? "customVariable"
-                    : rule.property === "gdapRelationshipAge"
-                    ? "gdapAge"
                     : "unknown",
               },
               operator: {
@@ -130,14 +121,6 @@ const Page = () => {
                     ? "Contains"
                     : rule.operator === "notlike"
                     ? "Does Not Contain"
-                    : rule.operator === "gt"
-                    ? "Greater Than"
-                    : rule.operator === "ge"
-                    ? "Greater Than or Equal"
-                    : rule.operator === "lt"
-                    ? "Less Than"
-                    : rule.operator === "le"
-                    ? "Less Than or Equal"
                     : rule.operator,
                 value: rule.operator,
               },
