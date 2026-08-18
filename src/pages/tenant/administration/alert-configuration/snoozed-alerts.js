@@ -32,7 +32,6 @@ const Page = () => {
         'CmdletName',
         'Tenant',
         'ContentPreview',
-        'SnoozeReason',
         'SnoozedBy',
         'Status',
         'RemainingDays',

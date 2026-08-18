@@ -8,9 +8,9 @@ const Page = () => {
   const reportDB = useCippReportDB({
     apiUrl: '/api/ListSites?type=OneDriveUsageAccount',
     queryKey: 'ListSites-OneDriveUsageAccount',
-    cacheName: 'OneDriveUsage',
+    cacheName: 'Sites',
     syncTitle: 'Sync OneDrive Report',
-    syncData: { Types: 'OneDriveUsage' },
+    syncData: { Types: 'OneDriveUsageAccount' },
     allowToggle: true,
     defaultCached: false,
     allowAllTenantSync: true,

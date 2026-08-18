@@ -47,7 +47,6 @@ const EditGroup = () => {
       RemoveOwner: [],
       AddContact: [],
       RemoveContact: [],
-      AddDevice: [],
       AddLicenses: [],
       RemoveLicenses: [],
       visibility: 'Public',
@@ -114,7 +113,6 @@ const EditGroup = () => {
           RemoveOwner: [],
           AddContact: [],
           RemoveContact: [],
-          AddDevice: [],
           AddLicenses: [],
           RemoveLicenses: [],
         }
@@ -311,47 +309,6 @@ const EditGroup = () => {
                   }
                 />
               </Grid>
-
-              {groupType !== 'Distribution List' && groupType !== 'Mail-Enabled Security' && (
-                <Grid size={{ xs: 12 }}>
-                  <CippFormComponent
-                    type="autoComplete"
-                    name="AddDevice"
-                    label="Add Devices"
-                    formControl={formControl}
-                    multiple={true}
-                    creatable={false}
-                    isFetching={groupInfo.isFetching}
-                    disabled={groupInfo.isFetching}
-                    api={{
-                      url: '/api/ListGraphRequest',
-                      dataKey: 'Results',
-                      data: {
-                        Endpoint: 'devices',
-                        manualPagination: true,
-                        $select: 'id,displayName,operatingSystem',
-                        $count: true,
-                        $orderby: 'displayName',
-                        $top: 999,
-                      },
-                      labelField: (option) =>
-                        option?.operatingSystem
-                          ? `${option.displayName} (${option.operatingSystem})`
-                          : (option?.displayName ?? ''),
-                      valueField: 'id',
-                      addedField: {
-                        displayName: 'displayName',
-                      },
-                      queryKey: `ListDevices-${tenantFilter}`,
-                      dataFilter: (options) =>
-                        options.filter(
-                          (option) => !groupInfo.data?.members?.some((m) => m.id === option.value)
-                        ),
-                      showRefresh: true,
-                    }}
-                  />
-                </Grid>
-              )}
 
               <Grid size={{ xs: 12 }}>
                 <Divider sx={{ my: 2 }} />

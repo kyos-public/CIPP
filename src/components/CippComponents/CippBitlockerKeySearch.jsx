@@ -29,7 +29,6 @@ export const CippBitlockerKeySearch = ({
   initialSearchTerm = "",
   initialSearchType = "keyId",
   autoSearch = false,
-  tenantFilter,
 }) => {
   const searchTerm = initialSearchTerm;
   const searchType = initialSearchType || "keyId";
@@ -67,11 +66,8 @@ export const CippBitlockerKeySearch = ({
 
   const getBitlockerKeys = ApiGetCall({
     url: "/api/ExecBitlockerSearch",
-    data: {
-      [searchType]: searchTerm,
-      ...(tenantFilter ? { tenantFilter } : {}),
-    },
-    queryKey: `bitlocker-${searchType}-${searchTerm}-${tenantFilter || "all"}`,
+    data: { [searchType]: searchTerm },
+    queryKey: `bitlocker-${searchType}-${searchTerm}`,
     waiting: false,
   });
   const { data, isSuccess, isFetching, refetch } = getBitlockerKeys;
@@ -79,14 +75,14 @@ export const CippBitlockerKeySearch = ({
 
   useEffect(() => {
     hasAutoSearched.current = false;
-  }, [initialSearchTerm, initialSearchType, tenantFilter]);
+  }, [initialSearchTerm, initialSearchType]);
 
   useEffect(() => {
     if (autoSearch && searchTerm && !hasAutoSearched.current) {
       refetch();
       hasAutoSearched.current = true;
     }
-  }, [autoSearch, refetch, searchTerm, tenantFilter]);
+  }, [autoSearch, refetch, searchTerm]);
 
   const results = data?.Results || [];
 

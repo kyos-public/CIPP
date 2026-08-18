@@ -193,7 +193,7 @@ export const CippUserInfoCard = (props) => {
                           sx={{
                             backgroundColor: "action.hover",
                             "&:hover": {
-                              backgroundColor: "error.main",
+                              backgroundColor: "error.light",
                               color: "error.contrastText",
                             },
                           }}

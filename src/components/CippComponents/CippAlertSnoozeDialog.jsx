@@ -8,7 +8,6 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
-  TextField,
   Typography,
   Box,
   Stack,
@@ -36,7 +35,6 @@ export const CippAlertSnoozeDialog = ({
   relatedQueryKeys,
 }) => {
   const [duration, setDuration] = useState('7')
-  const [reason, setReason] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
   const snoozeRequest = ApiPostCall({
@@ -52,7 +50,6 @@ export const CippAlertSnoozeDialog = ({
         TenantFilter: tenantFilter,
         AlertItem: alertItem,
         Duration: parseInt(duration, 10),
-        Reason: reason,
       },
     })
   }
@@ -61,7 +58,6 @@ export const CippAlertSnoozeDialog = ({
     setSubmitted(false)
     snoozeRequest.reset()
     setDuration('7')
-    setReason('')
     onClose()
   }
 
@@ -129,16 +125,6 @@ export const CippAlertSnoozeDialog = ({
                 />
               ))}
             </RadioGroup>
-            <TextField
-              label="Reason (optional)"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              fullWidth
-              multiline
-              minRows={2}
-              sx={{ mt: 2 }}
-              placeholder="Why is this alert being snoozed?"
-            />
           </Box>
         ) : (
           <CippApiResults apiObject={snoozeRequest} />

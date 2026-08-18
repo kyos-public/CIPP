@@ -18,14 +18,8 @@ export const CippReportToolbar = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false })
   const [refreshDialog, setRefreshDialog] = useState({ open: false })
 
-  const defaultReportId =
-    settings.UserSpecificSettings?.defaultTestSuite?.value ||
-    settings.defaultTestSuite?.value ||
-    'ztna'
   const selectedReport =
-    router.isReady && !router.query.reportId
-      ? defaultReportId
-      : router.query.reportId || defaultReportId
+    router.isReady && !router.query.reportId ? 'ztna' : router.query.reportId || 'ztna'
 
   const formControl = useForm({ mode: 'onChange' })
   const reportIdValue = useWatch({ control: formControl.control })
@@ -128,14 +122,12 @@ export const CippReportToolbar = () => {
           }
           arrow
         >
-          <Box component="span">
-            <CippAddTestReportDrawer
-              buttonText="Edit"
-              mode="edit"
-              reportToEdit={selectedCustomReport}
-              disabled={!selectedCustomReport}
-            />
-          </Box>
+          <CippAddTestReportDrawer
+            buttonText="Edit"
+            mode="edit"
+            reportToEdit={selectedCustomReport}
+            disabled={!selectedCustomReport}
+          />
         </Tooltip>
         <Tooltip
           title={

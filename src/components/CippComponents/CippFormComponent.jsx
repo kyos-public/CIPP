@@ -334,10 +334,6 @@ export const CippFormComponent = (props) => {
                 control={formControl.control}
                 defaultValue={defaultValue || ""}
                 rules={validators}
-                // No tenantFilter prop: CippTextFieldWithVariables reads the current tenant from
-                // useSettings itself and does not accept one. This used to pass an identifier that
-                // was never destructured from props, so the field threw a ReferenceError as soon as
-                // it rendered — which made the whole type unusable.
                 render={({ field }) => (
                   <CippTextFieldWithVariables
                     {...other}
@@ -350,6 +346,7 @@ export const CippFormComponent = (props) => {
                     value={field.value || ""}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
+                    tenantFilter={tenantFilter}
                     includeSystemVariables={includeSystemVariables}
                   />
                 )}

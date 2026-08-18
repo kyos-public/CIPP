@@ -3,33 +3,23 @@ import { Typography, Divider } from "@mui/material";
 import { Grid } from "@mui/system";
 import CippFormComponent from "./CippFormComponent";
 import { getCippTranslation } from "../../utils/get-cipp-translation";
-import { useIntuneDefinitions } from "../../hooks/use-intune-collection";
-import { collectSettingDefinitionIds } from "../../utils/intune-setting-definition-ids";
-
-// One shared reference for the nothing-to-resolve case, so the hook below is not handed a fresh
-// array on every render.
-const EMPTY_IDS = [];
+import { useIntuneCollection } from "../../hooks/use-intune-collection";
 
 const CippTemplateFieldRenderer = ({
   templateData,
   formControl,
   templateType = "conditionalAccess",
 }) => {
-  // Only the setting definition ids this template references are requested. Keyed on the raw JSON
-  // string so the walk runs once per template rather than once per render.
-  const intuneRawJson = templateType === "intune" ? templateData?.RAWJson : undefined;
-  const intuneDefinitionIds = useMemo(() => {
-    if (!intuneRawJson) return EMPTY_IDS;
-    try {
-      return Array.from(collectSettingDefinitionIds(JSON.parse(intuneRawJson)));
-    } catch {
-      return EMPTY_IDS;
-    }
-  }, [intuneRawJson]);
-
-  const { getDefinition: getIntuneDefinition } = useIntuneDefinitions(intuneDefinitionIds, {
-    enabled: templateType === "intune",
-  });
+  const intuneCollection = useIntuneCollection();
+  const intuneDefinitionMap = useMemo(() => {
+    const map = new Map();
+    (intuneCollection || []).forEach((def) => {
+      if (def?.id) {
+        map.set(def.id, def);
+      }
+    });
+    return map;
+  }, [intuneCollection]);
   // Default blacklisted fields with wildcard support
   const defaultBlacklistedFields = [
     "id",
@@ -330,7 +320,7 @@ const CippTemplateFieldRenderer = ({
                 <Grid container spacing={2}>
                   {(groupEntry?.children || []).map((child, childIndex) => {
                     const childPath = `${fieldPath}.${groupIndex}.children.${childIndex}`;
-                    const intuneDefinition = getIntuneDefinition(child?.settingDefinitionId);
+                    const intuneDefinition = intuneDefinitionMap.get(child?.settingDefinitionId);
                     const childLabel =
                       intuneDefinition?.displayName || child?.settingDefinitionId || `Child ${
                         childIndex + 1
@@ -435,7 +425,7 @@ const CippTemplateFieldRenderer = ({
                 // Handle different setting types
                 if (settingInstance.choiceSettingValue) {
                   // Find the setting definition in the intune collection
-                  const intuneObj = getIntuneDefinition(settingInstance.settingDefinitionId);
+                  const intuneObj = intuneDefinitionMap.get(settingInstance.settingDefinitionId);
 
                   const label = intuneObj?.displayName || `Setting ${index + 1}`;
                   const options =
@@ -461,7 +451,7 @@ const CippTemplateFieldRenderer = ({
 
                 if (settingInstance.simpleSettingValue) {
                   // Find the setting definition in the intune collection
-                  const intuneObj = getIntuneDefinition(settingInstance.settingDefinitionId);
+                  const intuneObj = intuneDefinitionMap.get(settingInstance.settingDefinitionId);
 
                   const label = intuneObj?.displayName || `Setting ${index + 1}`;
 
@@ -482,7 +472,9 @@ const CippTemplateFieldRenderer = ({
                 // Handle group setting collections
                 if (settingInstance.groupSettingCollectionValue) {
                   // Find the setting definition in the intune collection
-                  const intuneObj = getIntuneDefinition(settingInstance.settingDefinitionId);
+                  const intuneObj = intuneCollection.find(
+                    (item) => item.id === settingInstance.settingDefinitionId
+                  );
 
                   const label = intuneObj?.displayName || `Group Setting Collection ${index + 1}`;
 

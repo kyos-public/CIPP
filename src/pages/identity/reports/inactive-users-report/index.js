@@ -20,14 +20,14 @@ const Page = () => {
   const actions = [
     {
       label: "View User",
-      link: "/identity/administration/users/user?userId=[azureAdUserId]&tenantFilter=[tenantId]",
+      link: "/identity/administration/users/user?userId=[azureAdUserId]",
       multiPost: false,
       icon: <EyeIcon />,
       color: "success",
     },
     {
       label: "Edit User",
-      link: "/identity/administration/users/user/edit?userId=[azureAdUserId]&tenantFilter=[tenantId]",
+      link: "/identity/administration/users/user/edit?userId=[azureAdUserId]",
       icon: <Edit />,
       color: "success",
       target: "_self",

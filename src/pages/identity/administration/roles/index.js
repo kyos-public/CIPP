@@ -41,29 +41,21 @@ const Page = () => {
       type: 'POST',
       icon: <PersonRemove />,
       url: '/api/ExecRemoveAdminRole',
-      children: ({ formHook, row }) => (
-        <RemoveRoleMembersForm formHook={formHook} row={row} />
-      ),
+      children: ({ formHook, row }) => <RemoveRoleMembersForm formHook={formHook} row={row} />,
       data: {
         RoleId: 'Id',
-        RoleTemplateId: 'roleTemplateId',
         RoleName: 'DisplayName',
       },
       confirmText: 'Select the members to remove from [DisplayName].',
       allowResubmit: true,
       hideBulk: true,
-      // Custom roles have no roleTemplateId and no removal path via directoryRoles
-      condition: (row) =>
-        canWriteRole &&
-        (row?.Members ?? []).length > 0 &&
-        !!row?.roleTemplateId,
+      condition: (row) => canWriteRole && (row?.Members ?? []).length > 0,
     },
   ]
 
   const offCanvas = {
     extendedInfoFields: [
       'DisplayName', // Role Group Name
-      'isBuiltIn', // Built-in vs custom role
       'Members', // Member Names
     ],
     actions: actions,
@@ -73,7 +65,6 @@ const Page = () => {
     'DisplayName', // Role Name
     'Description', // Description
     'Members', // Members
-    'isBuiltIn', // Built-in vs custom role
   ]
 
   return (
@@ -87,8 +78,6 @@ const Page = () => {
   )
 }
 
-Page.getLayout = (page) => (
-  <DashboardLayout allTenantsSupport={false}>{page}</DashboardLayout>
-)
+Page.getLayout = (page) => <DashboardLayout allTenantsSupport={false}>{page}</DashboardLayout>
 
 export default Page

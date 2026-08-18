@@ -34,10 +34,9 @@ export const CippQueueTracker = ({ queueId, queryKey, title, onQueueComplete }) 
     data: { QueueId: effectiveQueueId },
     queryKey: `CippQueue-${effectiveQueueId || "unknown"}`,
     waiting: shouldShowQueue && !!effectiveQueueId && !isQueueCompleted,
-    refetchInterval: (query) => {
-      // TanStack Query v5 hands this callback the Query object, not the data - the response
-      // has to be read off query.state or the completion check below never matches.
-      const currentData = query?.state?.data?.[0];
+    refetchInterval: (data) => {
+      // Check if the current data shows completion
+      const currentData = data?.[0];
       const isCurrentCompleted =
         currentData?.Status === "Completed" ||
         currentData?.Status === "Failed" ||
