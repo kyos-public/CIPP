@@ -15,7 +15,7 @@ jobs:
     steps:
       # Checkout the repository
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       # Set up Node.js
       - name: Get Node version
@@ -26,7 +26,7 @@ jobs:
           echo "node_version=$node_sanitized_version" >> $GITHUB_OUTPUT
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ steps.get_node_version.outputs.node_version }}
 
@@ -54,7 +54,7 @@ jobs:
 
       # Upload to Azure Blob Storage
       - name: Azure Blob Upload
-        uses: LanceMcCarthy/Action-AzureBlobUpload@v3.15.0
+        uses: LanceMcCarthy/Action-AzureBlobUpload@e8e45adf361a29d1608ee587cd4c7b15f81c2b94 # v3.15.0
         with:
           connection_string: ${{ secrets.AZURE_CONNECTION_STRING }}
           container_name: cipp
